@@ -1,8 +1,10 @@
 # Secrets & credentials
 config/app.json
 config/cdn.json
+config/accounts.json
 tokens/
 profiles/
+.env
 
 # Python
 __pycache__/

@@ -64,6 +64,7 @@ def build_handoff(
     image_paths: list[str],
     error: str,
     screenshot_path: str | None = None,
+    video_path: str | None = None,
 ) -> Path:
     """Generate a manual handoff package when automation fails."""
     HANDOFF_DIR.mkdir(parents=True, exist_ok=True)
@@ -74,16 +75,16 @@ def build_handoff(
         "title": title,
         "description": description,
         "image_paths": image_paths,
+        "video_path": video_path,
         "error": error,
         "screenshot": screenshot_path,
         "created_at": datetime.now().isoformat(),
         "instructions": [
-            "1. 打开 tiktok.com/creator 并登录该账号",
-            "2. 点击「上传」→「图文」",
-            "3. 上传以上图片",
-            f"4. 填写标题: {title}",
-            f"5. 填写描述: {description}",
-            "6. 点击发布",
+            "1. 打开 tiktok.com/upload 并登录该账号",
+            f"2. 上传视频: {video_path or '需先用 video_maker 生成'}",
+            f"3. 填写标题: {title}",
+            f"4. 填写描述: {description}",
+            "5. 点击发布",
         ],
     }
     handoff_file.write_text(

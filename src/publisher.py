@@ -67,7 +67,7 @@ def publish(
             dry_run=dry_run,
         )
 
-    # mode == "auto": try API first, fallback to browser
+    # mode == "auto": try API first, fallback to browser on any failure
     try:
         result = publisher_api.publish(
             account_id, title, description, image_paths,
@@ -77,15 +77,13 @@ def publish(
         )
         if result.get("success"):
             return result
-        # API failed but not due to OAuth — don't fallback
-        if not isinstance(result.get("error", ""), str) or "OAuth" not in result.get("error", ""):
-            logger.warning(f"API 发布失败，不触发浏览器降级: {result.get('error')}")
-            return result
+        logger.warning(f"API 发布失败，降级到浏览器模式: {result.get('error')}")
     except OAuthUnavailable as e:
         logger.info(f"OAuth 不可用，降级到浏览器模式: {e}")
+    except Exception as e:
+        logger.warning(f"API 异常，降级到浏览器模式: {e}")
 
     # Fallback to browser
-    logger.info(f"降级到浏览器模式: {account_id}")
     return publisher_browser.publish(
         account_id, title, description, image_paths,
         headless=headless,

@@ -33,11 +33,22 @@ logger = setup_logging("tiktok-browser")
 TIKTOK_UPLOAD_URL = "https://www.tiktok.com/upload?lang=en"
 SCREENSHOTS_DIR = Path(__file__).resolve().parents[1] / "screenshots"
 
-# AdsPower bundles its own chromedriver
-ADSPOWER_CHROMEDRIVER = (
-    "C:/Users/Administrator/AppData/Roaming/adspower_global"
-    "/cwd_global/chrome_142/chromedriver.exe"
-)
+
+def _find_adspower_chromedriver() -> str:
+    """Auto-detect the latest AdsPower chromedriver path."""
+    import glob
+    base = os.path.expandvars(
+        os.environ.get("ADSPOWER_DIR", "%APPDATA%/adspower_global/cwd_global")
+    )
+    # Find all chrome_*/chromedriver.exe, pick the latest version
+    pattern = os.path.join(base, "chrome_*", "chromedriver.exe")
+    matches = sorted(glob.glob(pattern), reverse=True)
+    if matches:
+        return matches[0]
+    raise FileNotFoundError(
+        f"未找到 AdsPower chromedriver。搜索路径: {pattern}\n"
+        "可通过 ADSPOWER_DIR 环境变量指定 AdsPower cwd_global 目录"
+    )
 
 
 def _connect_selenium(selenium_address: str, webdriver_path: str) -> webdriver.Chrome:
@@ -45,7 +56,11 @@ def _connect_selenium(selenium_address: str, webdriver_path: str) -> webdriver.C
     opts = Options()
     opts.debugger_address = selenium_address
 
-    driver_path = webdriver_path if os.path.exists(webdriver_path) else ADSPOWER_CHROMEDRIVER
+    if webdriver_path and os.path.exists(webdriver_path):
+        driver_path = webdriver_path
+    else:
+        driver_path = _find_adspower_chromedriver()
+
     driver = webdriver.Chrome(service=Service(driver_path), options=opts)
     driver.set_script_timeout(15)
     return driver
@@ -65,19 +80,23 @@ def _screenshot(driver: webdriver.Chrome, name: str) -> str | None:
 
 
 def _js_click_button(driver: webdriver.Chrome, text: str, timeout: int = 10) -> bool:
-    """Click a button by its text content using JavaScript."""
+    """Click a button by its text content using JavaScript.
+
+    Uses executeScript arguments to avoid JS injection from text content.
+    """
     for _ in range(timeout):
-        clicked = driver.execute_script(f'''
+        clicked = driver.execute_script('''
+            var target = arguments[0];
             var buttons = document.querySelectorAll('button');
-            for (var b of buttons) {{
-                if (b.textContent.trim() === '{text}' && !b.disabled) {{
+            for (var b of buttons) {
+                if (b.textContent.trim() === target && !b.disabled) {
                     b.scrollIntoView();
                     b.click();
                     return true;
-                }}
-            }}
+                }
+            }
             return false;
-        ''')
+        ''', text)
         if clicked:
             return True
         time.sleep(1)
@@ -85,22 +104,26 @@ def _js_click_button(driver: webdriver.Chrome, text: str, timeout: int = 10) -> 
 
 
 def _fill_caption(driver: webdriver.Chrome, text: str) -> bool:
-    """Fill the caption/description field."""
-    return driver.execute_script(f'''
+    """Fill the caption/description field.
+
+    Uses executeScript arguments to avoid JS injection.
+    """
+    return driver.execute_script('''
+        var caption = arguments[0];
         var editors = document.querySelectorAll(
             '.public-DraftEditor-content, [contenteditable="true"]'
         );
-        for (var e of editors) {{
+        for (var e of editors) {
             var rect = e.getBoundingClientRect();
-            if (rect.width > 100 && rect.height > 10) {{
+            if (rect.width > 100 && rect.height > 10) {
                 e.focus();
                 document.execCommand('selectAll', false, null);
-                document.execCommand('insertText', false, {repr(text)});
+                document.execCommand('insertText', false, caption);
                 return true;
-            }}
-        }}
+            }
+        }
         return false;
-    ''')
+    ''', text)
 
 
 def publish(
@@ -244,10 +267,20 @@ def publish(
         final_title = driver.title
         screenshot_path = _screenshot(driver, f"{account_id}-05-published")
 
-        # Check if redirected to content manager (success indicator)
-        success = "content" in final_url or "studio" in final_url
+        # Verify success: check for content manager redirect + confirmation elements
+        success = False
+        if "content" in final_url and "upload" not in final_url:
+            # Redirected away from upload to content manager — good sign
+            success = True
         if not success:
-            logger.warning(f"发布后 URL 未跳转到内容管理: {final_url}")
+            # Check DOM for post entry (thumbnail with review status)
+            has_post = driver.execute_script('''
+                return document.querySelector('[class*="content-item"], [class*="video-card"]') !== null;
+            ''')
+            if has_post:
+                success = True
+        if not success:
+            logger.warning(f"发布后未检测到成功指标: {final_url}")
 
         return {
             "success": success,
@@ -269,6 +302,7 @@ def publish(
             image_paths=image_paths,
             error=str(e),
             screenshot_path=screenshot_path,
+            video_path=video_path if os.path.exists(video_path) else None,
         )
         logger.info(f"已生成人工操作包: {handoff_path}")
 
@@ -287,3 +321,7 @@ def publish(
                 logger.info("AdsPower 浏览器已关闭")
             except Exception as e:
                 logger.warning(f"关闭浏览器失败: {e}")
+        # Clean up temp video directory
+        import shutil
+        if os.path.isdir(video_dir):
+            shutil.rmtree(video_dir, ignore_errors=True)

@@ -44,11 +44,18 @@ class OAuthUnavailable(Exception):
 
 
 def _load_app_config() -> dict:
+    """Load TikTok app credentials from env vars or config/app.json."""
+    import os
+    client_key = os.environ.get("TIKTOK_CLIENT_KEY", "")
+    client_secret = os.environ.get("TIKTOK_CLIENT_SECRET", "")
+    if client_key and client_secret:
+        return {"client_key": client_key, "client_secret": client_secret}
+
     app_file = CONFIG_DIR / "app.json"
     if not app_file.exists():
         raise FileNotFoundError(
-            f"TikTok app 配置文件不存在: {app_file}\n"
-            "请按照 .env.example 创建此文件"
+            f"TikTok app 凭据未配置。设置环境变量 TIKTOK_CLIENT_KEY/TIKTOK_CLIENT_SECRET，"
+            f"或创建 {app_file}"
         )
     return json.loads(app_file.read_text(encoding="utf-8"))
 
@@ -66,12 +73,18 @@ def _load_token(account_id: str) -> dict | None:
 
 
 def _save_token(account_id: str, token_data: dict):
+    """Atomic write: write to temp file then rename to avoid corruption."""
     path = _token_file(account_id)
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        portalocker.lock(f, portalocker.LOCK_EX)
-        json.dump(token_data, f, ensure_ascii=False, indent=2)
-        portalocker.unlock(f)
+    import os, tempfile
+    fd, tmp_path = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(token_data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, path)
+    except Exception:
+        os.unlink(tmp_path)
+        raise
 
 
 def _generate_pkce() -> tuple[str, str]:

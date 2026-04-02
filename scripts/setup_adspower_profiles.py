@@ -70,20 +70,24 @@ def create_profile(
 
 
 def build_proxy_config(args) -> dict | None:
-    """Build AdsPower proxy config from CLI args."""
-    if not args.proxy_host:
+    """Build AdsPower proxy config from CLI args or env vars."""
+    import os
+    host = args.proxy_host or os.environ.get("PROXY_HOST", "")
+    if not host:
         return None
 
     config = {
         "proxy_soft": "other",
         "proxy_type": args.proxy_type,
-        "proxy_host": args.proxy_host,
-        "proxy_port": str(args.proxy_port),
+        "proxy_host": host,
+        "proxy_port": str(args.proxy_port or os.environ.get("PROXY_PORT", "")),
     }
-    if args.proxy_user:
-        config["proxy_user"] = args.proxy_user
-    if args.proxy_password:
-        config["proxy_password"] = args.proxy_password
+    user = args.proxy_user or os.environ.get("PROXY_USER", "")
+    password = args.proxy_password or os.environ.get("PROXY_PASSWORD", "")
+    if user:
+        config["proxy_user"] = user
+    if password:
+        config["proxy_password"] = password
 
     return config
 
@@ -117,13 +121,13 @@ def main():
     parser.add_argument("--prefix", default="TikTok Store", help="Profile 名称前缀")
     parser.add_argument("--group", default="TikTok", help="AdsPower 分组名")
 
-    # NodeMaven proxy settings
+    # NodeMaven proxy settings (credentials from env vars for security)
     parser.add_argument("--proxy-type", default="socks5", choices=["http", "https", "socks5"],
                         help="代理类型")
-    parser.add_argument("--proxy-host", help="NodeMaven 代理地址")
-    parser.add_argument("--proxy-port", type=int, help="代理端口")
-    parser.add_argument("--proxy-user", help="代理用户名")
-    parser.add_argument("--proxy-password", help="代理密码")
+    parser.add_argument("--proxy-host", help="代理地址 (或 PROXY_HOST 环境变量)")
+    parser.add_argument("--proxy-port", type=int, help="代理端口 (或 PROXY_PORT 环境变量)")
+    parser.add_argument("--proxy-user", help="代理用户名 (或 PROXY_USER 环境变量)")
+    parser.add_argument("--proxy-password", help="代理密码 (或 PROXY_PASSWORD 环境变量，推荐)")
 
     args = parser.parse_args()
 

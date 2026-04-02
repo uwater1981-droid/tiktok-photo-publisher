@@ -22,11 +22,25 @@ CONFIG_DIR = ROOT_DIR / "config"
 
 
 def _load_cdn_config() -> dict:
+    """Load R2 CDN credentials from env vars or config/cdn.json."""
+    import os
+    r2_key = os.environ.get("R2_ACCESS_KEY_ID", "")
+    r2_secret = os.environ.get("R2_SECRET_ACCESS_KEY", "")
+    if r2_key and r2_secret:
+        return {
+            "r2_account_id": os.environ.get("R2_ACCOUNT_ID", ""),
+            "r2_access_key_id": r2_key,
+            "r2_secret_access_key": r2_secret,
+            "r2_bucket_name": os.environ.get("R2_BUCKET_NAME", "social-media-assets"),
+            "r2_public_url_base": os.environ.get("R2_PUBLIC_URL_BASE", ""),
+            "r2_endpoint_url": os.environ.get("R2_ENDPOINT_URL", ""),
+        }
+
     cdn_file = CONFIG_DIR / "cdn.json"
     if not cdn_file.exists():
         raise FileNotFoundError(
-            f"CDN 配置文件不存在: {cdn_file}\n"
-            "请按照 .env.example 创建此文件"
+            f"CDN 凭据未配置。设置环境变量 R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY，"
+            f"或创建 {cdn_file}"
         )
     return json.loads(cdn_file.read_text(encoding="utf-8"))
 

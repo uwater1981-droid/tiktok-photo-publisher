@@ -153,10 +153,12 @@ def images_to_video(
                 "-movflags", "+faststart",
             ]
 
-        # Add audio
+        # Add audio: insert -i before output, add -map for audio stream
         if bg_music_path and os.path.exists(bg_music_path):
-            # Insert audio input before output
-            cmd.extend(["-i", bg_music_path, "-c:a", "aac", "-b:a", "128k", "-shortest"])
+            audio_input_idx = len(image_paths)  # audio is the next input after images
+            cmd.extend(["-i", bg_music_path])
+            cmd.extend(["-map", f"{audio_input_idx}:a"])
+            cmd.extend(["-c:a", "aac", "-b:a", "128k", "-shortest"])
 
         cmd.append(output_path)
 

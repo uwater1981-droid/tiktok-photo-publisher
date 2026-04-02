@@ -100,7 +100,9 @@ def check_browser_status(
     """Check if a browser profile is running."""
     _rate_limit()
     url = f"{base_url}/api/v1/browser/active"
-    resp = requests.get(url, params={"user_id": profile_id}, timeout=10)
+    resp = requests.get(url, params={"user_id": profile_id}, timeout=10,
+                        proxies={"http": None, "https": None})
+    resp.raise_for_status()
     data = resp.json()
     return {
         "profile_id": profile_id,

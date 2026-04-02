@@ -1,13 +1,17 @@
 """Account management for TikTok publisher."""
 
 import json
+import os
+import tempfile
 from pathlib import Path
+
+import portalocker
 
 CONFIG_DIR = Path(__file__).resolve().parents[1] / "config"
 ACCOUNTS_FILE = CONFIG_DIR / "accounts.json"
 
-VALID_STATUSES = {"active", "paused", "needs_reauth"}
-VALID_AUTH_MODES = {"api", "drissionpage", "auto"}
+VALID_STATUSES = {"active", "paused", "banned", "needs_reauth"}
+VALID_AUTH_MODES = {"api", "browser", "auto"}
 
 
 def load_accounts() -> list[dict]:
@@ -47,15 +51,23 @@ def validate_account(account: dict) -> list[str]:
 
 
 def update_account_status(account_id: str, status: str):
+    """Atomic, locked read-modify-write of account status."""
     if status not in VALID_STATUSES:
         raise ValueError(f"无效 status: {status}")
-    data = json.loads(ACCOUNTS_FILE.read_text(encoding="utf-8"))
-    for account in data.get("accounts", []):
-        if account["account_id"] == account_id:
-            account["status"] = status
-            ACCOUNTS_FILE.write_text(
-                json.dumps(data, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
-            return
+
+    with portalocker.Lock(str(ACCOUNTS_FILE) + ".lock", timeout=10):
+        data = json.loads(ACCOUNTS_FILE.read_text(encoding="utf-8"))
+        for account in data.get("accounts", []):
+            if account["account_id"] == account_id:
+                account["status"] = status
+                # Atomic write: temp file then rename
+                fd, tmp = tempfile.mkstemp(dir=CONFIG_DIR, suffix=".tmp")
+                try:
+                    with os.fdopen(fd, "w", encoding="utf-8") as f:
+                        json.dump(data, f, ensure_ascii=False, indent=2)
+                    os.replace(tmp, ACCOUNTS_FILE)
+                except Exception:
+                    os.unlink(tmp)
+                    raise
+                return
     raise ValueError(f"账号不存在: {account_id}")
