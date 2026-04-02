@@ -1,0 +1,180 @@
+{
+  "accounts": [
+    {
+      "account_id": "tiktok_sa_02",
+      "display_name": "SA Store 02",
+      "tiktok_username": "user5758135178319",
+      "status": "active",
+      "auth_mode": "browser",
+      "adspower_profile_id": "k1b2t42a",
+      "region": "沙特",
+      "level": "购买号",
+      "default_publish_times": [
+        "11:00",
+        "19:00"
+      ],
+      "tags": [
+        "store",
+        "saudi"
+      ],
+      "defaults": {
+        "privacy_level": "PUBLIC_TO_EVERYONE",
+        "disable_comment": false
+      }
+    },
+    {
+      "account_id": "tiktok_sa_03",
+      "display_name": "SA Store 03",
+      "tiktok_username": "user466156056727",
+      "status": "active",
+      "auth_mode": "browser",
+      "adspower_profile_id": "k1b2t44o",
+      "region": "沙特",
+      "level": "购买号",
+      "default_publish_times": [
+        "11:00",
+        "19:00"
+      ],
+      "tags": [
+        "store",
+        "saudi"
+      ],
+      "defaults": {
+        "privacy_level": "PUBLIC_TO_EVERYONE",
+        "disable_comment": false
+      }
+    },
+    {
+      "account_id": "tiktok_sa_04",
+      "display_name": "SA Store 04",
+      "tiktok_username": "user2813101011146",
+      "status": "active",
+      "auth_mode": "browser",
+      "adspower_profile_id": "k1b2t461",
+      "region": "沙特",
+      "level": "购买号",
+      "default_publish_times": [
+        "11:00",
+        "19:00"
+      ],
+      "tags": [
+        "store",
+        "saudi"
+      ],
+      "defaults": {
+        "privacy_level": "PUBLIC_TO_EVERYONE",
+        "disable_comment": false
+      }
+    },
+    {
+      "account_id": "tiktok_sa_05",
+      "display_name": "SA Store 05",
+      "tiktok_username": "user8349709740366",
+      "status": "active",
+      "auth_mode": "browser",
+      "adspower_profile_id": "k1b2t47r",
+      "region": "沙特",
+      "level": "购买号",
+      "default_publish_times": [
+        "11:00",
+        "19:00"
+      ],
+      "tags": [
+        "store",
+        "saudi"
+      ],
+      "defaults": {
+        "privacy_level": "PUBLIC_TO_EVERYONE",
+        "disable_comment": false
+      }
+    },
+    {
+      "account_id": "tiktok_sa_06",
+      "display_name": "SA Store 06",
+      "tiktok_username": "user3227514192614",
+      "status": "active",
+      "auth_mode": "browser",
+      "adspower_profile_id": "k1b2t49x",
+      "region": "沙特",
+      "level": "购买号",
+      "default_publish_times": [
+        "11:00",
+        "19:00"
+      ],
+      "tags": [
+        "store",
+        "saudi"
+      ],
+      "defaults": {
+        "privacy_level": "PUBLIC_TO_EVERYONE",
+        "disable_comment": false
+      }
+    },
+    {
+      "account_id": "tiktok_sa_07",
+      "display_name": "SA Store 07",
+      "tiktok_username": "user74417735961236",
+      "status": "banned",
+      "auth_mode": "browser",
+      "adspower_profile_id": "k1b2t4bb",
+      "region": "沙特",
+      "level": "购买号",
+      "default_publish_times": [
+        "11:00",
+        "19:00"
+      ],
+      "tags": [
+        "store",
+        "saudi"
+      ],
+      "defaults": {
+        "privacy_level": "PUBLIC_TO_EVERYONE",
+        "disable_comment": false
+      }
+    },
+    {
+      "account_id": "tiktok_sa_08",
+      "display_name": "SA Store 08",
+      "tiktok_username": "user9232536563748",
+      "status": "banned",
+      "auth_mode": "browser",
+      "adspower_profile_id": "k1b2t4d2",
+      "region": "沙特",
+      "level": "购买号",
+      "default_publish_times": [
+        "11:00",
+        "19:00"
+      ],
+      "tags": [
+        "store",
+        "saudi"
+      ],
+      "defaults": {
+        "privacy_level": "PUBLIC_TO_EVERYONE",
+        "disable_comment": false
+      }
+    },
+    {
+      "account_id": "tiktok_sa_09",
+      "display_name": "SA Store 09",
+      "tiktok_username": "user50152625966630",
+      "status": "banned",
+      "auth_mode": "browser",
+      "adspower_profile_id": "k1b2t4e0",
+      "region": "沙特",
+      "level": "购买号",
+      "default_publish_times": [
+        "11:00",
+        "19:00"
+      ],
+      "tags": [
+        "store",
+        "saudi"
+      ],
+      "defaults": {
+        "privacy_level": "PUBLIC_TO_EVERYONE",
+        "disable_comment": false
+      }
+    }
+  ]
+}

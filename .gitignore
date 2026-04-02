@@ -1,0 +1,29 @@
+# Secrets & credentials
+config/app.json
+config/cdn.json
+tokens/
+profiles/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Logs & artifacts
+*.log
+handoff/
+screenshots/

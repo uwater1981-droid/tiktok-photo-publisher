@@ -1,0 +1,30 @@
+{
+  "accounts": [
+    {
+      "account_id": "tiktok_store_01",
+      "display_name": "Brand Store 01",
+      "status": "active",
+      "auth_mode": "auto",
+      "adspower_profile_id": "xxxxxxxx",
+      "default_publish_times": ["11:00", "19:00"],
+      "tags": ["resort", "travel"],
+      "defaults": {
+        "privacy_level": "PUBLIC_TO_EVERYONE",
+        "disable_comment": false
+      }
+    },
+    {
+      "account_id": "tiktok_store_02",
+      "display_name": "Brand Store 02",
+      "status": "active",
+      "auth_mode": "browser",
+      "adspower_profile_id": "yyyyyyyy",
+      "default_publish_times": ["09:00", "18:00"],
+      "tags": ["resort", "travel"],
+      "defaults": {
+        "privacy_level": "PUBLIC_TO_EVERYONE",
+        "disable_comment": false
+      }
+    }
+  ]
+}
