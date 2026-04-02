@@ -10,6 +10,7 @@ from .accounts import get_account
 from .oauth import OAuthUnavailable
 from . import publisher_api
 from . import publisher_browser
+from .notion_log import log_publish
 from .utils import setup_logging
 
 logger = setup_logging("tiktok-publisher")
@@ -51,6 +52,41 @@ def publish(
 
     logger.info(f"发布到 {account_id} (mode={mode}): {title[:30]}... ({len(image_paths)} 张图片)")
 
+    result = _dispatch(
+        account_id, title, description, image_paths,
+        mode=mode,
+        privacy_level=privacy_level,
+        disable_comment=disable_comment,
+        headless=headless,
+        close_browser=close_browser,
+        dry_run=dry_run,
+    )
+
+    # Log to Notion (non-blocking, never fails the publish)
+    if not dry_run:
+        import os
+        log_publish(
+            title=title,
+            account_id=account_id,
+            success=result.get("success", False),
+            mode=result.get("mode", mode),
+            image_count=len(image_paths),
+            video_size_kb=int(os.path.getsize(result["video_path"]) / 1024)
+            if result.get("video_path") and os.path.exists(result.get("video_path", ""))
+            else 0,
+            description=description[:200],
+            tiktok_url=result.get("url"),
+            error=result.get("error", ""),
+            proxy_ip=result.get("proxy_ip", ""),
+        )
+
+    return result
+
+
+def _dispatch(
+    account_id, title, description, image_paths, *,
+    mode, privacy_level, disable_comment, headless, close_browser, dry_run,
+) -> dict:
     if mode == "api":
         return publisher_api.publish(
             account_id, title, description, image_paths,
@@ -83,7 +119,6 @@ def publish(
     except Exception as e:
         logger.warning(f"API 异常，降级到浏览器模式: {e}")
 
-    # Fallback to browser
     return publisher_browser.publish(
         account_id, title, description, image_paths,
         headless=headless,

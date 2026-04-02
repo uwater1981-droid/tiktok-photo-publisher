@@ -2,6 +2,7 @@
 config/app.json
 config/cdn.json
 config/accounts.json
+config/notion.json
 tokens/
 profiles/
 .env
