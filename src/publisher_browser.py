@@ -32,6 +32,56 @@ logger = setup_logging("tiktok-browser")
 
 TIKTOK_UPLOAD_URL = "https://www.tiktok.com/upload?lang=en"
 SCREENSHOTS_DIR = Path(__file__).resolve().parents[1] / "screenshots"
+ARCHIVE_BASE = os.environ.get("TIKTOK_ARCHIVE_DIR", "G:/TikTok发布归档")
+
+
+def _archive_content(
+    account_id: str,
+    image_paths: list[str],
+    video_path: str | None,
+    title: str,
+    description: str,
+    result: dict,
+):
+    """Archive images, video, screenshots to G drive."""
+    try:
+        import shutil, json
+        from datetime import datetime
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        safe_title = "".join(c for c in title[:30] if c.isalnum() or c in " _-").strip()
+        archive_dir = Path(ARCHIVE_BASE) / f"{date_str}_{account_id}_{safe_title}"
+        archive_dir.mkdir(parents=True, exist_ok=True)
+
+        # Copy images
+        for img in image_paths:
+            if os.path.exists(img):
+                shutil.copy2(img, archive_dir / Path(img).name)
+
+        # Copy video
+        if video_path and os.path.exists(video_path):
+            shutil.copy2(video_path, archive_dir / "slideshow.mp4")
+
+        # Copy screenshots
+        for key in ("screenshot",):
+            path = result.get(key)
+            if path and os.path.exists(path):
+                shutil.copy2(path, archive_dir / Path(path).name)
+
+        # Write metadata
+        meta = {
+            "account_id": account_id,
+            "title": title,
+            "description": description,
+            "image_count": len(image_paths),
+            "result": {k: v for k, v in result.items() if isinstance(v, (str, bool, int, float, type(None)))},
+            "archived_at": datetime.now().isoformat(),
+        }
+        (archive_dir / "meta.json").write_text(
+            json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        logger.info(f"已归档到: {archive_dir}")
+    except Exception as e:
+        logger.warning(f"归档失败: {e}")
 
 
 def _find_adspower_chromedriver() -> str:
@@ -282,7 +332,7 @@ def publish(
         if not success:
             logger.warning(f"发布后未检测到成功指标: {final_url}")
 
-        return {
+        result = {
             "success": success,
             "mode": "browser",
             "message": f"已发布 {len(image_paths)} 张图片轮播视频到 {account_id}",
@@ -290,6 +340,8 @@ def publish(
             "url": final_url,
             "video_path": video_path,
         }
+        _archive_content(account_id, image_paths, video_path, title, description, result)
+        return result
 
     except Exception as e:
         logger.error(f"浏览器发布失败: {e}")

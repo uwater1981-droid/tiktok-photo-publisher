@@ -74,7 +74,7 @@ def publish(
             video_size_kb=int(os.path.getsize(result["video_path"]) / 1024)
             if result.get("video_path") and os.path.exists(result.get("video_path", ""))
             else 0,
-            description=description[:200],
+            description=f"{title} - {len(image_paths)}张图片轮播视频" if not description else description[:200],
             tiktok_url=result.get("url"),
             error=result.get("error", ""),
             proxy_ip=result.get("proxy_ip", ""),
