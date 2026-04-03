@@ -106,8 +106,11 @@ FEATURES_EN = [
 ]
 
 
-def _fetch_product_images(category: dict, count: int = 4) -> list[str]:
-    """Fetch product images from IKEA SA via Firecrawl."""
+def _scrape_product_groups(category: dict) -> dict[str, list[str]]:
+    """Scrape IKEA SA and group images by product.
+
+    Returns: {product_name: [url1, url2, ...]} sorted by angle count desc.
+    """
     import re
     try:
         resp = requests.post(
@@ -125,54 +128,151 @@ def _fetch_product_images(category: dict, count: int = 4) -> list[str]:
         )
         data = resp.json()
         if not data.get("success"):
-            return []
+            return {}
 
         md = data["data"].get("markdown", "")
-        imgs = re.findall(r'https://www\.ikea\.com/[^)\s"]+\.(jpg|webp)[^)\s"]*', md)
-        # Get unique product images with ?f=xl for high res
-        seen = set()
-        result = []
-        for img_match in imgs:
-            url = img_match if isinstance(img_match, str) else img_match[0]
-            # Reconstruct full URL from regex
-            pass
 
-        # Simpler: extract full URLs
-        all_urls = re.findall(r'https://www\.ikea\.com/sa/en/images/products/[^)\s"]+\.jpg[^)\s"]*', md)
-        for url in all_urls:
-            base = url.split("?")[0]
-            if base not in seen:
-                seen.add(base)
-                result.append(base + "?f=xl")
-                if len(result) >= count * 3:
-                    break
+        # IKEA image pattern: products/{name}__{prod_id}_pe{pe_id}_s5.jpg
+        matches = re.findall(
+            r'https://www\.ikea\.com/sa/en/images/products/'
+            r'([a-z0-9-]+)__(\d+)_pe(\d+)_s5\.(jpg|webp)',
+            md,
+        )
 
-        # Pick random subset
-        if len(result) > count:
-            result = random.sample(result, count)
+        products: dict[str, list[str]] = {}
+        for name, prod_id, pe_id, ext in matches:
+            url = (
+                f"https://www.ikea.com/sa/en/images/products/"
+                f"{name}__{prod_id}_pe{pe_id}_s5.jpg?f=xl"
+            )
+            if name not in products:
+                products[name] = []
+            if url not in products[name]:
+                products[name].append(url)
 
-        return result[:count]
+        return products
 
     except Exception as e:
         logger.warning(f"Firecrawl 抓取失败: {e}")
-        return []
+        return {}
 
 
-def _download_images(urls: list[str], output_dir: Path) -> list[str]:
-    """Download images to local files."""
+def _select_best_product(products: dict[str, list[str]], min_angles: int = 3) -> tuple[str, list[str]]:
+    """Pick the best product: most angles, prefer 3-6 images.
+
+    Filters out products with < min_angles images (not enough variety).
+    Returns (product_name, [urls]).
+    """
+    candidates = [
+        (name, urls) for name, urls in products.items()
+        if len(urls) >= min_angles
+    ]
+    if not candidates:
+        # Fallback: accept 2+ angles
+        candidates = [
+            (name, urls) for name, urls in products.items()
+            if len(urls) >= 2
+        ]
+    if not candidates:
+        return ("", [])
+
+    # Pick randomly from top candidates (those with most angles)
+    candidates.sort(key=lambda x: -len(x[1]))
+    top_count = candidates[0][1]
+    top_tier = [c for c in candidates if len(c[1]) >= len(top_count) - 1]
+    name, urls = random.choice(top_tier)
+
+    # Limit to 4-6 images per product
+    if len(urls) > 6:
+        urls = random.sample(urls, 6)
+
+    return (name, urls)
+
+
+def _download_and_filter(urls: list[str], output_dir: Path) -> list[str]:
+    """Download images and filter out low quality ones.
+
+    Quality checks:
+    - File size > 5KB (reject tiny placeholders)
+    - Image dimensions >= 400x400 (reject thumbnails)
+    - Not mostly white/single color (reject blank images)
+    """
+    from PIL import Image
+    import io
+
     output_dir.mkdir(parents=True, exist_ok=True)
     paths = []
+
     for i, url in enumerate(urls):
         try:
             resp = requests.get(url, timeout=15)
             resp.raise_for_status()
-            path = str(output_dir / f"slide_{i+1}.jpg")
-            with open(path, "wb") as f:
-                f.write(resp.content)
+            data = resp.content
+
+            # Size check
+            if len(data) < 5000:
+                logger.debug(f"跳过小图 ({len(data)}B): {url[-40:]}")
+                continue
+
+            # Dimension check
+            img = Image.open(io.BytesIO(data))
+            if img.width < 400 or img.height < 400:
+                logger.debug(f"跳过低分辨率 ({img.width}x{img.height}): {url[-40:]}")
+                continue
+
+            # Color diversity check (reject mostly-white or single-color)
+            thumb = img.resize((50, 50)).convert("RGB")
+            pixels = list(thumb.getdata())
+            avg_r = sum(p[0] for p in pixels) / len(pixels)
+            avg_g = sum(p[1] for p in pixels) / len(pixels)
+            avg_b = sum(p[2] for p in pixels) / len(pixels)
+            # If average is very close to white (>245) and low variance, skip
+            variance = sum(
+                (p[0] - avg_r)**2 + (p[1] - avg_g)**2 + (p[2] - avg_b)**2
+                for p in pixels
+            ) / len(pixels)
+            if avg_r > 245 and avg_g > 245 and avg_b > 245 and variance < 200:
+                logger.debug(f"跳过纯白图: {url[-40:]}")
+                continue
+
+            # Save
+            path = str(output_dir / f"slide_{len(paths)+1}.jpg")
+            img.convert("RGB").save(path, "JPEG", quality=95)
             paths.append(path)
+            logger.info(f"下载 {len(paths)}: {img.width}x{img.height} {len(data)/1024:.0f}KB")
+
         except Exception as e:
-            logger.warning(f"下载失败 {url[:60]}: {e}")
+            logger.warning(f"下载失败: {e}")
+
     return paths
+
+
+def _fetch_product_images(category: dict, count: int = 4) -> tuple[str, list[str]]:
+    """Fetch multi-angle product images from IKEA SA.
+
+    Strategy:
+    1. Scrape category page → group by product
+    2. Select product with most angles (min 3)
+    3. Download and quality-filter
+    4. Return (product_name, [local_paths])
+    """
+    products = _scrape_product_groups(category)
+    if not products:
+        return ("", [])
+
+    name, urls = _select_best_product(products, min_angles=3)
+    if not urls:
+        return ("", [])
+
+    logger.info(f"选中产品: {name} ({len(urls)} 张多角度图)")
+    output_dir = POOL_DIR / name
+    paths = _download_and_filter(urls, output_dir)
+
+    if len(paths) < 2:
+        logger.warning(f"质量筛选后图片不足: {len(paths)}")
+        return ("", [])
+
+    return (name, paths[:count])
 
 
 def _generate_placeholder_images(category: dict, count: int = 4) -> list[str]:
@@ -235,20 +335,18 @@ def generate_content(
     ts = datetime.now().strftime("%Y%m%d%H%M%S")
     product_id = f"{cat['category']}-{account_id}-{ts}"
 
-    # Fetch or generate images
+    # Fetch multi-angle product images
+    product_name = ""
     image_paths = []
     if use_firecrawl:
-        urls = _fetch_product_images(cat, count=4)
-        if urls:
-            output_dir = POOL_DIR / product_id
-            image_paths = _download_images(urls, output_dir)
+        product_name, image_paths = _fetch_product_images(cat, count=6)
+        if product_name:
+            product_id = f"{product_name}-{account_id}-{ts}"
+            logger.info(f"产品: {product_name} ({len(image_paths)} 张多角度图)")
 
-    if len(image_paths) < 3:
-        logger.info(f"使用生成图片 (Firecrawl 结果不足: {len(image_paths)})")
+    if len(image_paths) < 2:
+        logger.info(f"Firecrawl 不足 ({len(image_paths)})，使用占位图")
         image_paths = _generate_placeholder_images(cat, count=4)
-
-    # Randomize image order (anti-duplicate)
-    random.shuffle(image_paths)
 
     # Pick caption template (different each time via random)
     feature_ar = random.choice(FEATURES_AR)
