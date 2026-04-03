@@ -83,10 +83,9 @@ def _add_badge(canvas: Image.Image) -> Image.Image:
     x1, y1 = bx, by + bh
     draw.rounded_rectangle([x0 - 3, y0 - 3, x1 + 3, y1 + 3], radius=r + 3, fill=gold)
     draw.rounded_rectangle([x0, y0, x1, y1], radius=r, fill=red)
-    # Use Chinese font for badge text (Segoe UI doesn't have CJK glyphs)
-    f_cn = ImageFont.truetype("C:/Windows/Fonts/msyhbd.ttc", 28, layout_engine=ImageFont.Layout.RAQM)
-    draw.text((x0 + 16, y0 + bh // 2), "⭐", fill=gold, font=f_cn, anchor="lm")
-    draw.text(((x0 + x1) // 2 + 10, y0 + bh // 2), "好物推荐", fill="white", font=f_cn, anchor="mm")
+    f_badge = _font(26)
+    draw.text((x0 + 16, y0 + bh // 2), "⭐", fill=gold, font=f_badge, anchor="lm")
+    draw.text(((x0 + x1) // 2 + 10, y0 + bh // 2), "ترشيح مميز", fill="white", font=f_badge, anchor="mm")
     rgba = Image.alpha_composite(rgba, badge)
     return rgba
 
