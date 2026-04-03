@@ -70,6 +70,27 @@ def _add_bars(canvas: Image.Image) -> Image.Image:
     return rgba
 
 
+def _add_badge(canvas: Image.Image) -> Image.Image:
+    rgba = canvas if canvas.mode == 'RGBA' else canvas.convert('RGBA')
+    badge = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(badge)
+    bx, by = W - 60, 210
+    bw, bh = 220, 70
+    red = (200, 35, 35, 240)
+    gold = (235, 195, 80, 255)
+    r = bh // 2
+    x0, y0 = bx - bw, by
+    x1, y1 = bx, by + bh
+    draw.rounded_rectangle([x0 - 3, y0 - 3, x1 + 3, y1 + 3], radius=r + 3, fill=gold)
+    draw.rounded_rectangle([x0, y0, x1, y1], radius=r, fill=red)
+    # Use Chinese font for badge text (Segoe UI doesn't have CJK glyphs)
+    f_cn = ImageFont.truetype("C:/Windows/Fonts/msyhbd.ttc", 28, layout_engine=ImageFont.Layout.RAQM)
+    draw.text((x0 + 16, y0 + bh // 2), "⭐", fill=gold, font=f_cn, anchor="lm")
+    draw.text(((x0 + x1) // 2 + 10, y0 + bh // 2), "好物推荐", fill="white", font=f_cn, anchor="mm")
+    rgba = Image.alpha_composite(rgba, badge)
+    return rgba
+
+
 def create_branded_slide(
     product_img_path: str,
     *,
@@ -88,6 +109,7 @@ def create_branded_slide(
     # Build layers
     canvas = _make_background(product_img)
     canvas = _add_bars(canvas)
+    canvas = _add_badge(canvas)
 
     draw = ImageDraw.Draw(canvas)
 

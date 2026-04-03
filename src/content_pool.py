@@ -74,35 +74,119 @@ PRODUCT_CATEGORIES = [
 ]
 
 CAPTION_TEMPLATES_AR = [
-    "{product_ar} ✨\n\n{feature_ar}\nجودة عالية وتصميم عصري\n\nتابعونا للمزيد! ❤️",
-    "اكتشفوا {product_ar} 🏠\n\n{feature_ar}\nعملي وأنيق لمنزلك\n\nشاركونا رأيكم! 💬",
-    "{product_ar} 🌟\n\n{feature_ar}\nالأناقة تبدأ من التفاصيل\n\nاحفظوا هذا المنشور! 📌",
-    "جديد! {product_ar} 🎉\n\n{feature_ar}\nمثالي لكل منزل عصري\n\nتابعونا! ❤️",
+    (
+        "يا جماعة {product_ar} يخبل من أول نظرة ✨\n"
+        "حسيت إنه من القطع اللي ترفع مستوى البيت بسرعة 😍\n"
+        "{feature_ar}\n"
+        "والتفاصيل فيه مرتبة بشكل يفتح النفس ويبين الذوق الراقي 👌\n"
+        "الخامة واضحة إنها ممتازة وتعطي إحساس فخم من غير تكلف 🤍\n"
+        "هذا النوع من المنتجات اللي فعلاً يفرق في الاستخدام اليومي\n"
+        "ولو تدورون على شيء عملي وكشخة بنفس الوقت فهذا هو الاختيار الصح 🔥\n"
+        "صراحة يستاهل كل المدح وأكثر وما ينمل منه أبدًا\n"
+        "مين يشوفه مثلي قطعة لازم تكون في البيت؟ 🛍️"
+    ),
+    (
+        "بنات والله {product_ar} من الأشياء اللي تخلي المكان أرتب وأحلى 💫\n"
+        "أول ما شفته عرفت إنه بيصير من القطع المفضلة عندي فورًا 😍\n"
+        "{feature_ar}\n"
+        "مرتب وأنيق ويعطي لمسة فخامة واضحة بدون أي مبالغة ✨\n"
+        "حتى شكله في التصوير يطلع يجنن ويخلي الزاوية كلها أرتب بكثير 📸\n"
+        "وأكثر شيء عجبني إنه يجمع بين الجمال والفائدة بطريقة ذكية جدًا\n"
+        "من المنتجات اللي إذا جربتوها بتحسون إنكم ما تقدرون تستغنون عنها 🙌\n"
+        "كل مرة أشوفه أقول فعلًا الاختيار الناجح يبان من أول لقطة 💯\n"
+        "إذا ودكم بشيء يمدح نفسه بنفسه فهذا هو وبقوة 🛒"
+    ),
+    (
+        "لا يفوتكم {product_ar} لأنه فعلًا تحفة بكل معنى الكلمة ⭐\n"
+        "اللوك حقه أنيق جدًا ويعطي المكان روح مرتبة ومريحة للعين 🤍\n"
+        "{feature_ar}\n"
+        "أحب المنتجات اللي تكون جميلة وعملية بنفس الوقت وهذا واحد منها وبقوة 👏\n"
+        "فيه لمسة جودة واضحة من أول استخدام وتحسون بقيمته فعلًا\n"
+        "وين ما تحطونه يعطي شكل أفخم ويخلي التفاصيل كلها أرتب وأجمل 🏡\n"
+        "ومن جد مناسب للي يحبون البيت يكون مرتب وستايله راقٍ طول الوقت\n"
+        "أمدحه وأنا مرتاحة لأنه من القطع اللي تعيش معكم وتظل حلوة 🔥\n"
+        "قولوا لي مو بس أنا اللي أشوفه يستاهل الترشيح بقوة؟ 😍"
+    ),
+    (
+        "مستحيل أتكلم عن {product_ar} بدون ما أتحمس له 🤩\n"
+        "هذا من المنتجات اللي تعطيكم إحساس رفاهية وأناقة من أول استخدام ✨\n"
+        "{feature_ar}\n"
+        "شكله يشرح الصدر وترتيبه يخلي أي زاوية في البيت تبدو أفخم بكثير\n"
+        "والأجمل إنه مو بس حلو بالشكل، بعد عملي جدًا ويخدمكم كل يوم 🙌\n"
+        "الخامة والثبات والتفاصيل كلها تقول إن المنتج معمول بعناية كبيرة 💯\n"
+        "من الاختيارات اللي إذا خذيتوها بتحسون إنكم وفقتوا جدًا فيها 🛍️\n"
+        "أحسه من النوع اللي الناس تسأل عنه أول ما تشوفه في البيت 😍\n"
+        "إذا تبون شيء يضيف قيمة وجمال فعلي فهذا يستاهل التجربة أكيد 🔥"
+    ),
 ]
 
 CAPTION_TEMPLATES_EN = [
-    "{product_en}\n\n{feature_en}\nHigh quality, modern design\n\nFollow for more!",
-    "Discover {product_en}\n\n{feature_en}\nPractical & elegant for your home",
-    "{product_en}\n\n{feature_en}\nElegance starts with the details",
-    "New! {product_en}\n\n{feature_en}\nPerfect for every modern home",
+    (
+        "{product_en} is honestly one of those finds that upgrades your whole space instantly ✨\n"
+        "The look is elegant, the feel is premium, and it stands out right away 😍\n"
+        "{feature_en}\n"
+        "I love how it adds style without sacrificing practicality for everyday use 👌\n"
+        "It gives that polished, curated-home vibe everyone is trying to create 🤍\n"
+        "The finish, shape, and overall quality make it feel far more luxurious than expected\n"
+        "If you want a product that looks amazing and performs beautifully, this is it 🔥\n"
+        "It is the kind of piece people notice immediately and ask about\n"
+        "Absolutely a must-have recommendation for anyone refreshing their home 🛍️"
+    ),
+    (
+        "You need to see {product_en} because it is such a standout piece 💫\n"
+        "From the first glance, it feels stylish, elevated, and seriously well made 😍\n"
+        "{feature_en}\n"
+        "This is exactly the kind of product that makes a room feel more intentional and refined ✨\n"
+        "I am obsessed with how it balances beauty, convenience, and a premium finish all at once\n"
+        "It looks stunning on camera, but even better in real life which says a lot 📸\n"
+        "If you love practical products that still feel special, this one delivers completely 🙌\n"
+        "Everything about it feels polished, thoughtful, and worth showing off 💯\n"
+        "Such an easy recommendation if you want to add instant charm to your space 🏡"
+    ),
+    (
+        "{product_en} is the kind of home upgrade that deserves all the hype ⭐\n"
+        "It brings a clean, sophisticated look that makes everything around it feel better 😍\n"
+        "{feature_en}\n"
+        "I appreciate products like this that combine smart function with beautiful design 👏\n"
+        "The quality comes through in every detail, and that makes a huge difference day to day\n"
+        "It is stylish enough to elevate your decor and useful enough to become a daily favorite 🔥\n"
+        "This is not just nice to have, it is one of those pieces that genuinely improves the setup\n"
+        "If you are building a modern, elegant home vibe, this fits perfectly 🤍\n"
+        "Definitely one of my strongest product recommendations right now 🛒"
+    ),
+    (
+        "I cannot stop talking about {product_en} because it is that good 🤩\n"
+        "Everything about it feels premium, polished, and made to impress from day one ✨\n"
+        "{feature_en}\n"
+        "It adds personality, convenience, and that expensive-looking touch every space needs\n"
+        "The design is beautiful, the presence is strong, and the everyday usefulness is a huge bonus 🙌\n"
+        "This is the sort of product that makes your home feel more organized and more luxurious at the same time\n"
+        "I love recommendations that actually live up to the excitement, and this one absolutely does 💯\n"
+        "It is eye-catching, practical, and seriously easy to fall in love with 😍\n"
+        "If you want a product that feels like a smart upgrade, put this at the top of your list 🔥"
+    ),
 ]
 
 FEATURES_AR = [
-    "تصميم أنيق يناسب كل الأذواق",
-    "مساحة تخزين واسعة وعملية",
-    "سهل التركيب والاستخدام",
-    "متوفر بألوان متعددة",
-    "مادة عالية الجودة ومتينة",
-    "توفير المساحة بشكل ذكي",
+    "يتميز هذا المنتج بتصميم أنيق يلفت النظر ويضيف لمسة راقية وواضحة لأي زاوية في البيت.",
+    "يوفر مساحة استخدام أو تخزين عملية بطريقة مرتبة تساعدكم على تنظيم المكان بشكل أجمل وأذكى.",
+    "تم اختيار خاماته بعناية ليعطي إحساسًا بالجودة العالية والمتانة التي تتحمل الاستخدام اليومي.",
+    "سهل في الاستخدام والترتيب، وهذا يجعله مناسبًا جدًا للحياة اليومية السريعة والمريحة.",
+    "تفاصيله المدروسة تمنحه مظهرًا فخمًا يجعل المساحة تبدو أكثر ترتيبًا وأناقة من أول نظرة.",
+    "يوازن بين الشكل الجميل والوظيفة العملية، لذلك يقدم قيمة حقيقية وليس مجرد مظهر فقط.",
+    "حضوره في المكان يرفع من الإحساس بالترتيب والاهتمام بالتفاصيل بطريقة يحبها كل من يشاهده.",
+    "يعتبر خيارًا موفقًا لمن يريد منتجًا عمليًا وجذابًا في الوقت نفسه ويستحق الترشيح فعلًا.",
 ]
 
 FEATURES_EN = [
-    "Elegant design for every taste",
-    "Spacious and practical storage",
-    "Easy to install and use",
-    "Available in multiple colors",
-    "High quality, durable material",
-    "Smart space-saving solution",
+    "This product features an elegant design that instantly adds a refined and elevated look to any space.",
+    "It offers practical everyday functionality while helping the area feel cleaner, more organized, and more polished.",
+    "The materials feel durable and well chosen, giving it a premium presence that stands up to regular use.",
+    "Its thoughtful structure makes it easy to use, easy to place, and genuinely convenient in daily life.",
+    "Every detail is designed to create a stylish finish that makes the surrounding decor feel more intentional.",
+    "It combines strong visual appeal with useful performance, making it much more than a decorative item.",
+    "The overall presentation gives your home a tidier, more curated atmosphere that people notice immediately.",
+    "It is a smart recommendation for anyone who wants a product that looks beautiful and works beautifully too.",
 ]
 
 
