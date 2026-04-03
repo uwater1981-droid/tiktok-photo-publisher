@@ -40,7 +40,36 @@ def _find_chromedriver() -> str:
     raise FileNotFoundError("未找到 AdsPower chromedriver")
 
 
-def publish_one(account_id: str, profile_id: str, *, dry_run: bool = False) -> dict:
+def _count_profile_videos(driver, username, timeout=20) -> int:
+    username = (username or "").strip().lstrip("@")
+    if not username:
+        return -1
+    try:
+        driver.get(f"https://www.tiktok.com/@{username}")
+        time.sleep(timeout)
+        count = driver.execute_script(
+            '''
+            const username = arguments[0];
+            const directCount = document.querySelectorAll('[data-e2e="user-post-item"]').length;
+            if (directCount) return directCount;
+            return document.querySelectorAll(`a[href*='/@${username}/video/']`).length;
+            ''',
+            username,
+        )
+        return int(count)
+    except Exception as e:
+        logger.warning(f"[{username}] Failed to count profile videos: {e}")
+        return -1
+
+
+def publish_one(
+    account_id: str,
+    profile_id: str,
+    *,
+    dry_run: bool = False,
+    tiktok_username: str = "",
+    _retry: bool = False,
+) -> dict:
     """Generate unique content and publish to one account."""
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
@@ -94,6 +123,9 @@ def publish_one(account_id: str, profile_id: str, *, dry_run: bool = False) -> d
         driver.set_page_load_timeout(25)
         driver.set_script_timeout(8)
         driver.set_window_size(1440, 900)
+        pre_video_count = -1
+        if tiktok_username:
+            pre_video_count = _count_profile_videos(driver, tiktok_username, timeout=15)
 
         # 4. Navigate to upload
         driver.get("https://www.tiktok.com/creator#/upload?scene=creator_center")
@@ -168,19 +200,52 @@ def publish_one(account_id: str, profile_id: str, *, dry_run: bool = False) -> d
                             c = c["return"];
                         }
                     }
-                    b.dispatchEvent(new MouseEvent("click", {bubbles: true}));
+                    [
+                        ["pointerdown", window.PointerEvent || MouseEvent],
+                        ["mousedown", MouseEvent],
+                        ["click", MouseEvent],
+                        ["pointerup", window.PointerEvent || MouseEvent],
+                        ["mouseup", MouseEvent]
+                    ].forEach(function(entry) {
+                        b.dispatchEvent(new entry[1](entry[0], {
+                            bubbles: true,
+                            cancelable: true,
+                            composed: true,
+                            view: window
+                        }));
+                    });
                     b.dispatchEvent(new KeyboardEvent("keydown", {key: "Enter", bubbles: true}));
                 }
             }
         ''')
         logger.info(f"[{account_id}] Post 已触发")
-        time.sleep(15)
+        time.sleep(30)
 
         # 9. Verify
-        url = driver.current_url
-        success = "content" in url or driver.execute_script(
-            'return !document.querySelector("button")?.textContent?.includes("Post")'
-        )
+        verified = False
+        post_video_count = -1
+        if tiktok_username:
+            post_video_count = _count_profile_videos(driver, tiktok_username, timeout=15)
+            verified = pre_video_count >= 0 and post_video_count > pre_video_count
+            logger.info(
+                f"[{account_id}] Verification pre={pre_video_count} post={post_video_count} verified={verified}"
+            )
+            if not verified and not _retry:
+                logger.warning(f"[{account_id}] Verification failed, retrying publish once")
+                if browser_started:
+                    try:
+                        adspower.stop_browser(profile_id)
+                    except Exception:
+                        pass
+                    browser_started = False
+                return publish_one(
+                    account_id,
+                    profile_id,
+                    dry_run=dry_run,
+                    tiktok_username=tiktok_username,
+                    _retry=True,
+                )
+        success = verified
 
         # 10. Log
         log_publish_local(account_id, content["product_id"], content["category"], success)
@@ -189,7 +254,8 @@ def publish_one(account_id: str, profile_id: str, *, dry_run: bool = False) -> d
         _archive(account_id, content, video_path, branded_paths=branded_paths)
 
         result = {
-            "success": True,
+            "success": success,
+            "verified": verified,
             "mode": "browser",
             "account_id": account_id,
             "product_id": content["product_id"],
@@ -201,7 +267,7 @@ def publish_one(account_id: str, profile_id: str, *, dry_run: bool = False) -> d
         notion_log(
             title=content["title"],
             account_id=account_id,
-            success=True,
+            success=success,
             mode="browser",
             image_count=len(content["image_paths"]),
             description=f"{content['category']} - {content['caption_en'][:60]}",
@@ -288,7 +354,12 @@ def main():
             time.sleep(args.stagger)
 
         logger.info(f"[{i+1}/{len(accounts)}] {aid}")
-        result = publish_one(aid, pid, dry_run=args.dry_run)
+        result = publish_one(
+            aid,
+            pid,
+            dry_run=args.dry_run,
+            tiktok_username=acc.get("tiktok_username", ""),
+        )
         results.append(result)
         status = "OK" if result.get("success") else "FAIL"
         logger.info(f"  {status}: {result.get('message', result.get('error', ''))}")
