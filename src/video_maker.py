@@ -41,8 +41,18 @@ def _prepare_image(src_path: str, output_path: str) -> str:
 
     img = img.resize((new_w, new_h), Image.LANCZOS)
 
-    # Center on black canvas
-    canvas = Image.new("RGB", (TIKTOK_WIDTH, TIKTOK_HEIGHT), (0, 0, 0))
+    # Blurred background fill (instead of black bars)
+    from PIL import ImageFilter
+    ratio_fill = max(TIKTOK_WIDTH / img.width, TIKTOK_HEIGHT / img.height) * 1.15
+    bg = img.resize(
+        (int(img.width * ratio_fill), int(img.height * ratio_fill)),
+        Image.LANCZOS,
+    ).filter(ImageFilter.GaussianBlur(radius=25))
+    bx = (bg.width - TIKTOK_WIDTH) // 2
+    by = (bg.height - TIKTOK_HEIGHT) // 2
+    canvas = bg.crop((bx, by, bx + TIKTOK_WIDTH, by + TIKTOK_HEIGHT))
+
+    # Overlay sharp image centered
     x = (TIKTOK_WIDTH - new_w) // 2
     y = (TIKTOK_HEIGHT - new_h) // 2
     canvas.paste(img, (x, y))
