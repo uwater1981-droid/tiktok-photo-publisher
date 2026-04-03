@@ -69,7 +69,7 @@ def publish_one(account_id: str, profile_id: str, *, dry_run: bool = False) -> d
     branded_paths = create_branded_slides(
         content["image_paths"], branded_dir,
         title_ar=content["category_ar"],
-        subtitle_ar=content.get('feature_ar', '')[:60],
+        subtitle_ar=content.get('feature_ar', '')[:42],
         title_en=content["category_en"],
         category_en=content["category_en"].upper(),
     )
