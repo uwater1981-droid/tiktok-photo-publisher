@@ -380,6 +380,8 @@ def generate_content(
         "image_paths": image_paths,
         "product_id": product_id,
         "category": cat["category"],
+        "category_ar": cat["name_ar"],
+        "category_en": cat["name_en"],
         "caption_ar": caption_ar,
         "caption_en": caption_en,
         "hashtags": hashtags,

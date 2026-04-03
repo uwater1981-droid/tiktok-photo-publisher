@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.accounts import get_active_accounts
+from src.brand_template import create_branded_slides
 from src.content_pool import generate_content, log_publish_local
 from src.video_maker import images_to_video
 from src import adspower
@@ -53,6 +54,9 @@ def publish_one(account_id: str, profile_id: str, *, dry_run: bool = False) -> d
     if not CHROMEDRIVER:
         CHROMEDRIVER = _find_chromedriver()
 
+    branded_dir = None
+    video_dir = None
+
     # 1. Generate content
     content = generate_content(account_id, use_firecrawl=True)
     logger.info(f"[{account_id}] 内容: {content['category']} - {len(content['image_paths'])} 张图片")
@@ -61,10 +65,20 @@ def publish_one(account_id: str, profile_id: str, *, dry_run: bool = False) -> d
         return {"success": True, "mode": "dry_run", "account_id": account_id,
                 "message": f"Dry run: {content['category']} {content['title'][:30]}"}
 
+    branded_dir = tempfile.mkdtemp(prefix="tiktok_branded_")
+    branded_paths = create_branded_slides(
+        content["image_paths"], branded_dir,
+        title_ar=content["category_ar"],
+        subtitle_ar="",
+        title_en=content["category_en"],
+        category_en=content["category_en"].upper(),
+    )
+    logger.info(f"[{account_id}] branded: {len(branded_paths)} slides")
+
     # 2. Generate video
     video_dir = tempfile.mkdtemp(prefix="tiktok_auto_")
     video_path = os.path.join(video_dir, "slideshow.mp4")
-    images_to_video(content["image_paths"], video_path, duration_per_image=4.0)
+    images_to_video(branded_paths, video_path, duration_per_image=4.0)
     logger.info(f"[{account_id}] 视频: {os.path.getsize(video_path)/1024:.0f} KB")
 
     browser_started = False
@@ -173,7 +187,7 @@ def publish_one(account_id: str, profile_id: str, *, dry_run: bool = False) -> d
         log_publish_local(account_id, content["product_id"], content["category"], success)
 
         # 11. Archive to G drive
-        _archive(account_id, content, video_path)
+        _archive(account_id, content, video_path, branded_paths=branded_paths)
 
         result = {
             "success": True,
@@ -213,24 +227,32 @@ def publish_one(account_id: str, profile_id: str, *, dry_run: bool = False) -> d
                 adspower.stop_browser(profile_id)
             except Exception:
                 pass
-        # Cleanup temp video
         import shutil
-        shutil.rmtree(video_dir, ignore_errors=True)
+        if branded_dir:
+            shutil.rmtree(branded_dir, ignore_errors=True)
+        if video_dir:
+            shutil.rmtree(video_dir, ignore_errors=True)
 
 
-def _archive(account_id: str, content: dict, video_path: str):
+def _archive(account_id: str, content: dict, video_path: str, branded_paths: list[str] | None = None):
     """Archive content to G drive."""
+    import os
+    from datetime import datetime
     import shutil
     archive_base = os.environ.get("TIKTOK_ARCHIVE_DIR", "G:/TikTok发布归档")
     date = datetime.now().strftime("%Y-%m-%d_%H%M")
-    from datetime import datetime
-    import os
     archive_dir = Path(archive_base) / f"{date}_{account_id}_{content['category']}"
     try:
         archive_dir.mkdir(parents=True, exist_ok=True)
         for img in content.get("image_paths", []):
             if os.path.exists(img):
                 shutil.copy2(img, archive_dir)
+        if branded_paths:
+            branded_dir = archive_dir / "branded"
+            branded_dir.mkdir(exist_ok=True)
+            for img in branded_paths:
+                if os.path.exists(img):
+                    shutil.copy2(img, branded_dir)
         if os.path.exists(video_path):
             shutil.copy2(video_path, archive_dir / "slideshow.mp4")
         meta = {k: v for k, v in content.items() if k != "image_paths"}
