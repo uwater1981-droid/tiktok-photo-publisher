@@ -39,7 +39,7 @@ class VideoMakerTests(unittest.TestCase):
         self.commands.append((cmd, kwargs))
         output_path = Path(cmd[-1])
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_bytes(b"fake-output")
+        output_path.write_bytes(b"\x00\x00\x00\x18ftypisom" + (b"\x00" * (1024 * 1024)))
         return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
 
     def test_resolve_bgm_prefers_explicit_then_default(self) -> None:
@@ -133,8 +133,8 @@ class VideoMakerTests(unittest.TestCase):
             )
 
         self.assertEqual(result, str(output_path))
-        self.assertEqual(len(self.commands), 4)
-        expected_duration = (15.0 + (3 - 1) * 0.5) / 3
+        self.assertEqual(len(self.commands), 6)
+        expected_duration = (15.0 + (5 - 1) * 0.5) / 5
 
         render_commands = [cmd for cmd, _ in self.commands[:-1]]
         for cmd in render_commands:

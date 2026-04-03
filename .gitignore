@@ -28,5 +28,13 @@ Thumbs.db
 
 # Logs & artifacts
 *.log
+*.jsonl
 handoff/
 screenshots/
+content/pool/
+
+# Test artifacts
+test_assets/*.png
+test_assets/*.jpg
+test_assets/*.mp4
+test_assets/branded_output/

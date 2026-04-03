@@ -109,6 +109,23 @@ def _run_ffmpeg(cmd: list[str]) -> None:
         raise RuntimeError(f"FFmpeg failed: {result.stderr[-200:]}")
 
 
+def _validate_output_video(output_path: str, duration_seconds: float) -> None:
+    if not os.path.exists(output_path):
+        raise RuntimeError(f"Video output not found: {output_path}")
+
+    min_size_bytes = max(500 * 1024, int(duration_seconds * 50 * 1024))
+    size = os.path.getsize(output_path)
+    if size <= min_size_bytes:
+        raise RuntimeError(
+            f"Video output too small: {size} bytes (expected more than {min_size_bytes} bytes)"
+        )
+
+    with open(output_path, "rb") as f:
+        header = f.read(8)
+    if b"ftyp" not in header:
+        raise RuntimeError(f"Video output is not a valid MP4: {output_path}")
+
+
 def _render_kenburns_clip(
     image_path: str,
     output_clip_path: str,
@@ -296,6 +313,11 @@ def images_to_video(
 
         cmd.append(output_path)
         _run_ffmpeg(cmd)
+        total_duration = (
+            len(rendered_clips) * duration_per_image
+            - max(len(rendered_clips) - 1, 0) * transition_duration
+        )
+        _validate_output_video(output_path, total_duration)
 
         size = os.path.getsize(output_path)
         logger.info(f"Video created: {output_path} ({size / 1024 / 1024:.1f} MB)")

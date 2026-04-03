@@ -16,6 +16,10 @@ import sys
 import time
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.accounts import get_active_accounts
@@ -29,6 +33,7 @@ from src.utils import setup_logging
 logger = setup_logging("auto-publish")
 
 CHROMEDRIVER = None  # Auto-detected
+PUBLISH_LOG = Path(__file__).resolve().parents[1] / "publish_log.jsonl"
 
 
 def _find_chromedriver() -> str:
@@ -60,6 +65,25 @@ def _count_profile_videos(driver, username, timeout=20) -> int:
     except Exception as e:
         logger.warning(f"[{username}] Failed to count profile videos: {e}")
         return -1
+
+
+def _should_skip_account(account_id: str) -> bool:
+    if not PUBLISH_LOG.exists():
+        return False
+
+    results: list[bool] = []
+    with open(PUBLISH_LOG, encoding="utf-8") as f:
+        for line in f:
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if entry.get("account_id") == account_id and isinstance(entry.get("success"), bool):
+                results.append(entry["success"])
+
+    recent_results = results[-5:]
+    failures = sum(1 for success in recent_results if not success)
+    return failures >= 3
 
 
 def publish_one(
@@ -145,7 +169,20 @@ def publish_one(
             raise RuntimeError("未找到上传控件")
         inputs[0].send_keys(os.path.abspath(video_path))
         logger.info(f"[{account_id}] 上传中...")
-        time.sleep(20)
+        upload_ready = False
+        for _ in range(20):
+            upload_ready = bool(driver.execute_script(
+                '''
+                return Array.from(document.querySelectorAll("button")).some(
+                    button => button.textContent.trim() === "Post" && !button.disabled
+                );
+                '''
+            ))
+            if upload_ready:
+                break
+            time.sleep(3)
+        if not upload_ready:
+            logger.warning(f"[{account_id}] Upload polling timed out after 60s")
 
         # 6. Fill caption (keyboard method - proven to work)
         # Find and focus the description editor
@@ -354,6 +391,16 @@ def main():
             time.sleep(args.stagger)
 
         logger.info(f"[{i+1}/{len(accounts)}] {aid}")
+        if _should_skip_account(aid):
+            logger.warning(f"[{aid}] Skipping account after 3+ failures in the last 5 results")
+            results.append({
+                "success": False,
+                "skipped": True,
+                "mode": "circuit_breaker",
+                "account_id": aid,
+                "error": "Skipped after 3+ failures in the last 5 publish results",
+            })
+            continue
         result = publish_one(
             aid,
             pid,

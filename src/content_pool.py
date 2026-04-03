@@ -16,6 +16,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import portalocker
 import requests
 from PIL import Image, ImageDraw
 
@@ -27,7 +28,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 POOL_DIR = ROOT_DIR / "content" / "pool"
 POOL_INDEX = POOL_DIR / "index.json"
 
-FIRECRAWL_KEY = os.environ.get("FIRECRAWL_API_KEY", "fc-e95d5889ee0f408da1da5420c637905a")
+FIRECRAWL_KEY = os.environ.get("FIRECRAWL_API_KEY", "")
 
 # Gulf market product categories (kitchen/home/bathroom)
 PRODUCT_CATEGORIES = [
@@ -532,5 +533,6 @@ def log_publish_local(account_id: str, product_id: str, category: str, success: 
         "success": success,
         "timestamp": datetime.now().isoformat(),
     }
-    with open(log_file, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    with portalocker.Lock(str(log_file) + ".lock", timeout=10):
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
