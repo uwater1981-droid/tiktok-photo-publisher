@@ -71,6 +71,38 @@ PRODUCT_CATEGORIES = [
         "hashtags_ar": ["#اضاءة", "#ديكور", "#منزل"],
         "hashtags_en": ["#lighting", "#homelighting", "#interiordesign"],
     },
+    {
+        "category": "kitchen_trolleys",
+        "name_ar": "عربات المطبخ",
+        "name_en": "Kitchen Trolleys",
+        "ikea_url": "https://www.ikea.com/sa/en/cat/kitchen-islands-trolleys-10471/",
+        "hashtags_ar": ["#مطبخ", "#عربة_مطبخ", "#تنظيم"],
+        "hashtags_en": ["#kitchen", "#kitchentrolley", "#kitchenisland"],
+    },
+    {
+        "category": "shelving_units",
+        "name_ar": "وحدات الأرفف",
+        "name_en": "Shelving Units",
+        "ikea_url": "https://www.ikea.com/sa/en/cat/shelving-units-st002/",
+        "hashtags_ar": ["#ارفف", "#تنظيم", "#منزل"],
+        "hashtags_en": ["#shelving", "#storage", "#homeorganization"],
+    },
+    {
+        "category": "chest_of_drawers",
+        "name_ar": "أدراج وخزائن",
+        "name_en": "Chest of Drawers",
+        "ikea_url": "https://www.ikea.com/sa/en/cat/chest-of-drawers-16221/",
+        "hashtags_ar": ["#خزائن", "#ادراج", "#غرف_نوم"],
+        "hashtags_en": ["#drawers", "#bedroom", "#storage"],
+    },
+    {
+        "category": "shoe_storage",
+        "name_ar": "تخزين الأحذية",
+        "name_en": "Shoe Storage",
+        "ikea_url": "https://www.ikea.com/sa/en/cat/shoe-storage-10456/",
+        "hashtags_ar": ["#تخزين_احذية", "#تنظيم", "#مدخل"],
+        "hashtags_en": ["#shoestorage", "#entryway", "#organization"],
+    },
 ]
 
 CAPTION_TEMPLATES_AR = [
@@ -241,7 +273,7 @@ def _scrape_product_groups(category: dict) -> dict[str, list[str]]:
         return {}
 
 
-def _select_best_product(products: dict[str, list[str]], min_angles: int = 3) -> tuple[str, list[str]]:
+def _select_best_product(products: dict[str, list[str]], min_angles: int = 5) -> tuple[str, list[str]]:
     """Pick the best product: most angles, prefer 3-6 images.
 
     Filters out products with < min_angles images (not enough variety).
@@ -252,10 +284,10 @@ def _select_best_product(products: dict[str, list[str]], min_angles: int = 3) ->
         if len(urls) >= min_angles
     ]
     if not candidates:
-        # Fallback: accept 2+ angles
+        # Fallback: accept 3+ angles
         candidates = [
             (name, urls) for name, urls in products.items()
-            if len(urls) >= 2
+            if len(urls) >= 3
         ]
     if not candidates:
         return ("", [])
@@ -331,7 +363,7 @@ def _download_and_filter(urls: list[str], output_dir: Path) -> list[str]:
     return paths
 
 
-def _fetch_product_images(category: dict, count: int = 4) -> tuple[str, list[str]]:
+def _fetch_product_images(category: dict, count: int = 6) -> tuple[str, list[str]]:
     """Fetch multi-angle product images from IKEA SA.
 
     Strategy:
@@ -344,7 +376,7 @@ def _fetch_product_images(category: dict, count: int = 4) -> tuple[str, list[str
     if not products:
         return ("", [])
 
-    name, urls = _select_best_product(products, min_angles=3)
+    name, urls = _select_best_product(products, min_angles=5)
     if not urls:
         return ("", [])
 
