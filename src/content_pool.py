@@ -468,6 +468,8 @@ def generate_content(
         "category_en": cat["name_en"],
         "caption_ar": caption_ar,
         "caption_en": caption_en,
+        "feature_ar": feature_ar,
+        "feature_en": feature_en,
         "hashtags": hashtags,
     }
 

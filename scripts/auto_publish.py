@@ -69,7 +69,7 @@ def publish_one(account_id: str, profile_id: str, *, dry_run: bool = False) -> d
     branded_paths = create_branded_slides(
         content["image_paths"], branded_dir,
         title_ar=content["category_ar"],
-        subtitle_ar="",
+        subtitle_ar=content.get('feature_ar', '')[:60],
         title_en=content["category_en"],
         category_en=content["category_en"].upper(),
     )
@@ -137,9 +137,8 @@ def publish_one(account_id: str, profile_id: str, *, dry_run: bool = False) -> d
         if focused:
             ActionChains(driver).key_down(Keys.CONTROL).send_keys("a").key_up(Keys.CONTROL).perform()
             time.sleep(0.3)
-            # Use short English caption (proven to work with hashtags)
-            short_caption = f"{content['caption_en'][:80]} {content['hashtags'][:100]}"
-            ActionChains(driver).send_keys(short_caption).perform()
+            full_desc = f"{content['caption_ar']}\n\n{content['hashtags']}\n\n{content['caption_en']}"
+            ActionChains(driver).send_keys(full_desc[:3900]).perform()
             time.sleep(1)
             ActionChains(driver).send_keys(Keys.ESCAPE).perform()
             time.sleep(1)
