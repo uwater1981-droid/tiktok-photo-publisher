@@ -31,6 +31,18 @@ POOL_INDEX = POOL_DIR / "index.json"
 FIRECRAWL_KEY = os.environ.get("FIRECRAWL_API_KEY", "")
 
 # Gulf market product categories (kitchen/home/bathroom)
+YAMAZAKI_URLS = {
+    "kitchen_storage": "https://www.theyamazakihome.com/collections/kitchen-organization",
+    "bathroom": "https://www.theyamazakihome.com/collections/bathroom",
+    "laundry": "https://www.theyamazakihome.com/collections/laundry-utility",
+    "home_decoration": "https://www.theyamazakihome.com/collections/living-room",
+    "lighting": "https://www.theyamazakihome.com/collections/lighting",
+    "shelving_units": "https://www.theyamazakihome.com/collections/shelving",
+    "shoe_storage": "https://www.theyamazakihome.com/collections/entryway",
+    "kitchen_trolleys": "https://www.theyamazakihome.com/collections/kitchen-organization",
+    "chest_of_drawers": "https://www.theyamazakihome.com/collections/bedroom",
+}
+
 PRODUCT_CATEGORIES = [
     {
         "category": "kitchen_storage",
@@ -364,32 +376,131 @@ def _download_and_filter(urls: list[str], output_dir: Path) -> list[str]:
     return paths
 
 
+def _scrape_yamazaki_products(category: dict) -> dict[str, list[str]]:
+    """Scrape Yamazaki Home for product images. Returns {product_name: [urls]}."""
+    import re
+    yamazaki_url = YAMAZAKI_URLS.get(category["category"])
+    if not yamazaki_url or not FIRECRAWL_KEY:
+        return {}
+
+    try:
+        resp = requests.post(
+            "https://api.firecrawl.dev/v1/scrape",
+            headers={
+                "Authorization": f"Bearer {FIRECRAWL_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={"url": yamazaki_url, "formats": ["markdown"], "onlyMainContent": True},
+            timeout=30,
+        )
+        data = resp.json()
+        if not data.get("success"):
+            return {}
+
+        md = data["data"].get("markdown", "")
+
+        # Parse Yamazaki Shopify CDN images grouped by product
+        # Pattern: [![Product Name](image_url)](product_link)
+        products: dict[str, list[str]] = {}
+        # Extract product names and their thumbnail images
+        blocks = re.findall(
+            r'\[!\[([^\]]+)\]\((//theyamazakihome\.com/cdn/shop/(?:files|products)/[^\)]+\.(?:jpg|png|webp)[^\)]*)\)',
+            md,
+        )
+        for name, img_url in blocks:
+            clean_name = name.strip().lower().replace(" ", "-")[:60]
+            full_url = "https:" + img_url.split("?")[0] + "?v=1"
+            # Get high-res version
+            full_url = re.sub(r'_\d+x\d*\.', '_1000x.', full_url) if '_' in full_url else full_url
+            if clean_name not in products:
+                products[clean_name] = []
+            if full_url not in products[clean_name]:
+                products[clean_name].append(full_url)
+
+        # Also extract product page links for multi-image scraping
+        product_links = re.findall(
+            r'\]\((/products/[a-z0-9-]+)\)',
+            md,
+        )
+
+        # For each product with a link, try to scrape its individual page for more images
+        scraped_pages = 0
+        for link in product_links[:5]:  # Limit to 5 to save Firecrawl credits
+            product_url = f"https://www.theyamazakihome.com{link}"
+            try:
+                resp2 = requests.post(
+                    "https://api.firecrawl.dev/v1/scrape",
+                    headers={
+                        "Authorization": f"Bearer {FIRECRAWL_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={"url": product_url, "formats": ["markdown"], "onlyMainContent": True},
+                    timeout=30,
+                )
+                data2 = resp2.json()
+                if not data2.get("success"):
+                    continue
+
+                md2 = data2["data"].get("markdown", "")
+                # Extract product name from page
+                title_match = re.search(r'#\s*(.+)', md2)
+                if not title_match:
+                    continue
+                pname = title_match.group(1).strip().lower().replace(" ", "-")[:60]
+
+                # Extract all images on this page
+                page_imgs = re.findall(
+                    r'(//theyamazakihome\.com/cdn/shop/(?:files|products)/[^\)"\s]+\.(?:jpg|png|webp)[^\)"\s]*)',
+                    md2,
+                )
+                for img_url in page_imgs:
+                    full_url = "https:" + img_url.split("?")[0] + "?v=1"
+                    if pname not in products:
+                        products[pname] = []
+                    if full_url not in products[pname] and len(products[pname]) < 8:
+                        products[pname].append(full_url)
+
+                scraped_pages += 1
+            except Exception:
+                continue
+
+        logger.info(f"Yamazaki: {len(products)} products, scraped {scraped_pages} pages")
+        return products
+
+    except Exception as e:
+        logger.warning(f"Yamazaki 抓取失败: {e}")
+        return {}
+
+
 def _fetch_product_images(category: dict, count: int = 6) -> tuple[str, list[str]]:
-    """Fetch multi-angle product images from IKEA SA.
+    """Fetch multi-angle product images from multiple sources.
 
-    Strategy:
-    1. Scrape category page → group by product
-    2. Select product with most angles (min 3)
-    3. Download and quality-filter
-    4. Return (product_name, [local_paths])
+    Priority: Yamazaki Home (best photography) → IKEA SA (existing)
+    Accepts any product with 2+ images. video_maker pads to 5 slides.
     """
+    # Source 1: Yamazaki Home
+    products = _scrape_yamazaki_products(category)
+    if products:
+        name, urls = _select_best_product(products, min_angles=3)
+        if urls:
+            logger.info(f"Yamazaki 产品: {name} ({len(urls)} images)")
+            output_dir = POOL_DIR / name
+            paths = _download_and_filter(urls, output_dir)
+            if paths:
+                return (name, paths[:count])
+
+    # Source 2: IKEA SA (existing)
     products = _scrape_product_groups(category)
-    if not products:
-        return ("", [])
+    if products:
+        name, urls = _select_best_product(products, min_angles=2)
+        if urls:
+            logger.info(f"IKEA 产品: {name} ({len(urls)} images)")
+            output_dir = POOL_DIR / name
+            paths = _download_and_filter(urls, output_dir)
+            if paths:
+                return (name, paths[:count])
 
-    name, urls = _select_best_product(products, min_angles=5)
-    if not urls:
-        return ("", [])
-
-    logger.info(f"选中产品: {name} ({len(urls)} 张多角度图)")
-    output_dir = POOL_DIR / name
-    paths = _download_and_filter(urls, output_dir)
-
-    if len(paths) < 2:
-        logger.warning(f"质量筛选后图片不足: {len(paths)}")
-        return ("", [])
-
-    return (name, paths[:count])
+    return ("", [])
 
 
 def _generate_placeholder_images(category: dict, count: int = 4) -> list[str]:
@@ -461,22 +572,26 @@ def generate_content(
             product_id = f"{product_name}-{account_id}-{ts}"
             logger.info(f"产品: {product_name} ({len(image_paths)} 张多角度图)")
 
-    if len(image_paths) < 2:
-        logger.info(f"Firecrawl 不足 ({len(image_paths)})，使用占位图")
-        image_paths = _generate_placeholder_images(cat, count=4)
+    if len(image_paths) < 1:
+        logger.info(f"真实图片不足 ({len(image_paths)})，使用占位图")
+        image_paths = _generate_placeholder_images(cat, count=6)
 
-    # Pick caption template (different each time via random)
+    # Use product-specific name in captions if available, otherwise generic category
+    display_name_en = product_name.replace("-", " ").title() if product_name else cat["name_en"]
+    display_name_ar = cat["name_ar"]  # Arabic stays as category (no translation)
+
+    # Pick caption template
     feature_ar = random.choice(FEATURES_AR)
     feature_en = random.choice(FEATURES_EN)
     tmpl_ar = random.choice(CAPTION_TEMPLATES_AR)
     tmpl_en = random.choice(CAPTION_TEMPLATES_EN)
 
     caption_ar = tmpl_ar.format(
-        product_ar=cat["name_ar"],
+        product_ar=display_name_ar,
         feature_ar=feature_ar,
     )
     caption_en = tmpl_en.format(
-        product_en=cat["name_en"],
+        product_en=display_name_en,
         feature_en=feature_en,
     )
 
